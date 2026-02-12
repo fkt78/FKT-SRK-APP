@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出張旅費精算アプリ</title>
+    
+    <!-- スタイルと外部ライブラリの読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.3/Recharts.min.js"></script>
+    
+    <!-- ▼ Firebaseライブラリ (v11 Modular) ▼ -->
+    <script type="module">
+        // Firebase SDKのコア機能と、使用する製品をインポート
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // グローバルスコープにFirebaseの関数をアタッチして、Babelスクリプトからアクセスできるようにする
+        window.firebase = {
+            initializeApp,
+            getAuth,
+            signInAnonymously,
+            onAuthStateChanged,
+            getFirestore,
+            collection,
+            query,
+            where,
+            onSnapshot,
+            addDoc,
+            doc,
+            updateDoc,
+            deleteDoc,
+            serverTimestamp
+        };
+    </script>
+    
+    <style>
+        /* フォントの基本的な設定 */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Rechartsのツールチップのスタイル調整 */
+        .recharts-default-tooltip {
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // グローバルスコープからFirebaseの関数を取得
+        const {
+            initializeApp, getAuth, signInAnonymously, onAuthStateChanged,
+            getFirestore, collection, query, where, onSnapshot, addDoc,
+            doc, updateDoc, deleteDoc, serverTimestamp
+        } = window.firebase;
+
+        // Rechartsコンポーネントの分割代入
+        const { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        // --- UIコンポーネント定義 ---
+        const Card = ({ children, className = '' }) => (
+          <div className={`bg-white border border-gray-200 rounded-lg shadow-sm p-6 ${className}`}>
+            {children}
+          </div>
+        );
+
+        const CardHeader = ({ children, className = '' }) => (
+          <div className={`mb-4 ${className}`}>
+            {children}
+          </div>
+        );
+
+        const CardTitle = ({ children, className = '' }) => (
+          <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className}`}>
+            {children}
+          </h3>
+        );
+
+        const CardDescription = ({ children, className = '' }) => (
+          <p className={`text-sm text-gray-500 ${className}`}>
+            {children}
+          </p>
+        );
+
+        const CardContent = ({ children, className = '' }) => (
+          <div className={className}>
+            {children}
+          </div>
+        );
+
+        const Input = React.forwardRef((props, ref) => (
+          <input
+            {...props}
+            ref={ref}
+            className={`flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${props.className}`}
+          />
+        ));
+
+        const Button = ({ children, className = '', variant = 'default', ...props }) => {
+            const baseClasses = "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2";
+            const variants = {
+                default: "bg-gray-900 text-white hover:bg-gray-800",
+                secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300",
+                ghost: "hover:bg-gray-100 hover:text-gray-900",
+                destructive: "bg-red-500 text-white hover:bg-red-600",
+            };
+            return (
+              <button {...props} className={`${baseClasses} ${variants[variant]} ${className}`}>
+                {children}
+              </button>
+            );
+        };
+
+        const Select = ({ children, className = '', ...props }) => (
+          <select
+            {...props}
+            className={`flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+          >
+            {children}
+          </select>
+        );
+
+        const Table = ({ children, className = '' }) => (
+            <div className="w-full overflow-auto">
+                <table className={`w-full caption-bottom text-sm ${className}`}>
+                    {children}
+                </table>
+            </div>
+        );
+
+        const TableHeader = ({ children, className = '' }) => (
+          <thead className={`[&_tr]:border-b ${className}`}>{children}</thead>
+        );
+
+        const TableBody = ({ children, className = '' }) => (
+          <tbody className={`[&_tr:last-child]:border-0 ${className}`}>{children}</tbody>
+        );
+
+        const TableRow = ({ children, className = '' }) => (
+          <tr className={`border-b transition-colors hover:bg-gray-50/50 data-[state=selected]:bg-gray-100 ${className}`}>
+            {children}
+          </tr>
+        );
+
+        const TableHead = ({ children, className = '' }) => (
+          <th className={`h-12 px-4 text-left align-middle font-medium text-gray-500 [&:has([role=checkbox])]:pr-0 ${className}`}>
+            {children}
+          </th>
+        );
+
+        const TableCell = ({ children, className = '' }) => (
+          <td className={`p-4 align-middle [&:has([role=checkbox])]:pr-0 ${className}`}>
+            {children}
+          </td>
+        );
+
+        // --- モーダルコンポーネント ---
+        const Modal = ({ onConfirm, onCancel, title, children, confirmText, confirmColor }) => (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-auto">
+                    <h3 className="text-lg font-bold mb-4">{title}</h3>
+                    <div>{children}</div>
+                    <div className="mt-6 flex justify-end space-x-4">
+                        <Button onClick={onCancel} variant="secondary">キャンセル</Button>
+                        <Button onClick={onConfirm} className={confirmColor}>{confirmText}</Button>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const EditExpenseModal = ({ expense, onSave, onClose, expenseCategories }) => {
+            const [editData, setEditData] = React.useState(expense);
+
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                setEditData(prev => ({...prev, [name]: value}));
+            };
+
+            return (
+                <Modal
+                    title="経費を修正"
+                    onConfirm={() => onSave(editData)}
+                    onCancel={onClose}
+                    confirmText="保存"
+                    confirmColor="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700 mb-1">日付</label>
+                            <Input id="edit-date" type="date" name="date" value={editData.date} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label htmlFor="edit-category" className="block text-sm font-medium text-gray-700 mb-1">カテゴリ</label>
+                            <Select id="edit-category" name="category" value={editData.category} disabled>
+                                 {Object.entries(expenseCategories).map(([key, value]) => (
+                                    <option key={key} value={key}>{value}</option>
+                                 ))}
+                            </Select>
+                        </div>
+                        <div>
+                            <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-700 mb-1">金額 (円)</label>
+                            <Input id="edit-amount" type="number" name="amount" value={editData.amount} onChange={handleChange} disabled={editData.category === 'allowance'} />
+                        </div>
+                        <div>
+                            <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">内容</label>
+                            <Input id="edit-description" type="text" name="description" value={editData.description} onChange={handleChange} maxLength="50" />
+                        </div>
+                    </div>
+                </Modal>
+            );
+        };
+
+        // --- メインアプリケーションコンポーネント ---
+        function App() {
+            // --- 状態管理 ---
+            const [db, setDb] = React.useState(null);
+            const [isAuthReady, setIsAuthReady] = React.useState(false);
+            const [members, setMembers] = React.useState([]);
+            const [selectedMember, setSelectedMember] = React.useState(null);
+            const [selectedMemberId, setSelectedMemberId] = React.useState('');
+            const [expenses, setExpenses] = React.useState([]);
+            const [newExpense, setNewExpense] = React.useState({
+                date: new Date().toISOString().slice(0, 10),
+                category: 'transportation',
+                amount: '',
+                description: '',
+            });
+            const [isLoading, setIsLoading] = React.useState(true);
+            const [error, setError] = React.useState(null);
+            const [notification, setNotification] = React.useState('');
+            const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+            const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+            const [expenseToProcess, setExpenseToProcess] = React.useState(null);
+            const [closingType, setClosingType] = React.useState('endOfMonth');
+            const [currentDate, setCurrentDate] = React.useState(new Date());
+
+            // --- Firebaseの初期化 ---
+            React.useEffect(() => {
+                try {
+                    const firebaseConfig = {
+                      apiKey: "AIzaSyDa3D1KEKIfqKL5abeSjZy6_Fg_7WOtqh0",
+                      authDomain: "omake-app.firebaseapp.com",
+                      projectId: "omake-app",
+                      storageBucket: "omake-app.firebasestorage.app",
+                      messagingSenderId: "227934150935",
+                      appId: "1:227934150935:web:556705231119275f35d752",
+                      measurementId: "G-9PH4Q587P6"
+                    };
+
+                    const app = initializeApp(firebaseConfig);
+                    const authInstance = getAuth(app);
+                    const firestore = getFirestore(app);
+                    
+                    setDb(firestore);
+
+                    onAuthStateChanged(authInstance, async (user) => {
+                        if (!user) {
+                            try {
+                                await signInAnonymously(authInstance);
+                            } catch (authError) {
+                                console.error("Authentication error:", authError);
+                                setError("authentication-error");
+                            }
+                        }
+                        setIsAuthReady(true);
+                    });
+                } catch (e) {
+                    console.error("Firebase initialization failed:", e);
+                    setError("initialization-error");
+                    setIsLoading(false);
+                }
+            }, []);
+            
+            // --- データ取得 ---
+            React.useEffect(() => {
+                if (!isAuthReady || !db) return;
+                
+                const ROLE_ORDER = ["経営者", "マネージャー", "リーダー", "クルー", "サポーター", "トレーニー", "外注業者", "本部OFC", "その他"];
+
+                setIsLoading(true);
+                setError(null);
+                const membersCollectionRef = collection(db, 'artifacts/general-master-data/public/data/employees');
+                
+                const unsubscribe = onSnapshot(membersCollectionRef, (querySnapshot) => {
+                    const fetchedMembers = querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        const fullName = `${data.lastName || ''} ${data.firstName || ''}`.trim();
+                        const displayName = data.nickname || fullName; 
+                        return { id: doc.id, name: displayName, ...data };
+                    });
+
+                    fetchedMembers.sort((a, b) => {
+                        const indexA = ROLE_ORDER.indexOf(a.role || "");
+                        const indexB = ROLE_ORDER.indexOf(b.role || "");
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
+                        return indexA - indexB;
+                    });
+
+                    setMembers(fetchedMembers);
+                    setIsLoading(false);
+                }, (err) => {
+                    console.error("Error fetching members:", err);
+                     if (err.code === 'permission-denied') setError('permission-denied-members');
+                     else setError("メンバーデータの読み込みに失敗しました。");
+                    setIsLoading(false);
+                });
+
+                return () => unsubscribe();
+            }, [isAuthReady, db]);
+
+            React.useEffect(() => {
+                if (!selectedMember || !db) {
+                    setExpenses([]);
+                    return;
+                };
+
+                setIsLoading(true);
+                const expensesQuery = query(collection(db, 'expenses'), where("memberId", "==", selectedMember.id));
+
+                const unsubscribe = onSnapshot(expensesQuery, (querySnapshot) => {
+                    const expensesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setExpenses(expensesData);
+                    setError(null);
+                    setIsLoading(false);
+                }, (err) => {
+                    console.error("Error fetching expenses:", err);
+                    if (err.code === 'permission-denied') setError('permission-denied-expenses');
+                    else setError("経費データの読み込みに失敗しました。");
+                    setIsLoading(false);
+                });
+
+                return () => unsubscribe();
+            }, [selectedMember, db]);
+            
+            // --- 期間計算と経費フィルタリング ---
+            const { startDate, endDate } = React.useMemo(() => {
+                const formatDate = (date) => {
+                    const year = date.getFullYear();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+
+                if (closingType === '15th') {
+                    const start = new Date(year, month - 1, 16);
+                    const end = new Date(year, month, 15);
+                    return { startDate: formatDate(start), endDate: formatDate(end) };
+                } else {
+                    const start = new Date(year, month, 1);
+                    const end = new Date(year, month + 1, 0);
+                    return { startDate: formatDate(start), endDate: formatDate(end) };
+                }
+            }, [closingType, currentDate]);
+
+            const filteredExpenses = React.useMemo(() => {
+                return expenses
+                    .filter(expense => expense.date >= startDate && expense.date <= endDate)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, [expenses, startDate, endDate]);
+
+            // *** NEW: 合計金額の計算 ***
+            const totalAmount = React.useMemo(() => {
+                return filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+            }, [filteredExpenses]);
+
+            // --- データ定義 ---
+            const expenseCategories = { transportation: '交通費', accommodation: '宿泊費', meal: '食費', entertainment: '交際費', allowance: '日当・手当', other: 'その他' };
+            const allowances = [ { name: '市内出張', amount: 3000, description: '日当 (市内出張)' }, { name: '市外出張', amount: 5000, description: '日当 (市外出張)' }, { name: '県外出張', amount: 10000, description: '日当 (県外出張)' } ];
+
+            // --- イベントハンドラ ---
+            const handleSelectMember = (member) => setSelectedMember(member);
+            const handleBackToSelection = () => { setSelectedMember(null); setSelectedMemberId(''); };
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setNewExpense(prev => {
+                    const updated = { ...prev, [name]: value };
+                    if (name === 'category') { updated.amount = ''; updated.description = ''; }
+                    return updated;
+                });
+            };
+            const handleAllowanceSelect = (e) => {
+                const selected = allowances.find(a => a.name === e.target.value);
+                if (selected) setNewExpense(prev => ({ ...prev, amount: selected.amount, description: selected.description }));
+            };
+            const handleAddExpense = async (e) => {
+                e.preventDefault();
+                if (!db || !selectedMember || !newExpense.date || !newExpense.amount || !newExpense.category) { setError("必須項目をすべて入力してください。"); return; }
+                try {
+                    await addDoc(collection(db, 'expenses'), { ...newExpense, memberId: selectedMember.id, amount: parseFloat(newExpense.amount), createdAt: serverTimestamp() });
+                    setNewExpense({ date: new Date().toISOString().slice(0, 10), category: 'transportation', amount: '', description: '' });
+                } catch (err) {
+                    console.error("Error adding expense:", err);
+                    if (err.code === 'permission-denied') setError('permission-denied-expenses');
+                    else setError("経費の追加に失敗しました。");
+                }
+            };
+            const handleDeleteClick = (expense) => { setExpenseToProcess(expense); setIsDeleteModalOpen(true); };
+            const handleEditClick = (expense) => { setExpenseToProcess(expense); setIsEditModalOpen(true); };
+            const confirmDelete = async () => {
+                if (!db || !expenseToProcess) return;
+                try { await deleteDoc(doc(db, 'expenses', expenseToProcess.id)); } 
+                catch (err) { console.error("Error deleting expense:", err); setError("経費の削除に失敗しました。"); } 
+                finally { setIsDeleteModalOpen(false); setExpenseToProcess(null); }
+            };
+            const handleUpdateExpense = async (updatedData) => {
+                if (!db || !updatedData) return;
+                const { id, ...dataToUpdate } = updatedData;
+                try { await updateDoc(doc(db, 'expenses', id), { ...dataToUpdate, amount: parseFloat(dataToUpdate.amount) }); } 
+                catch (err) { console.error("Error updating expense:", err); setError("経費の更新に失敗しました。"); } 
+                finally { setIsEditModalOpen(false); setExpenseToProcess(null); }
+            };
+            const showNotification = (message) => { setNotification(message); setTimeout(() => setNotification(''), 3000); };
+            
+            const handleCopyToClipboard = () => {
+                if (filteredExpenses.length === 0) { showNotification("コピーするデータがありません。"); return; }
+                const header = "日付\tカテゴリ\t内容\t金額(円)\n";
+                const body = filteredExpenses.map(e => `${e.date}\t${expenseCategories[e.category]}\t${e.description}\t${e.amount}`).join('\n');
+                navigator.clipboard.writeText(header + body).then(() => showNotification("クリップボードにコピーしました！"), () => showNotification("コピーに失敗しました。"));
+            };
+
+            const handleDownloadCsv = () => {
+                if (filteredExpenses.length === 0) { showNotification("ダウンロードするデータがありません。"); return; }
+                const header = ["日付", "カテゴリ", "内容", "金額(円)"];
+                const csvRows = [header.join(',')];
+                filteredExpenses.forEach(e => {
+                    const row = [e.date, expenseCategories[e.category], e.description, e.amount];
+                    csvRows.push(row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
+                });
+                const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `expenses_${selectedMember.name}_${startDate}_${endDate}.csv`;
+                link.click();
+                showNotification("CSVファイルをダウンロードしました。");
+            };
+            
+            // --- チャートデータ生成 ---
+            const chartData = React.useMemo(() => {
+                const dataMap = new Map();
+                filteredExpenses.forEach(expense => {
+                    const categoryName = expenseCategories[expense.category] || '不明';
+                    dataMap.set(categoryName, (dataMap.get(categoryName) || 0) + expense.amount);
+                });
+                return Array.from(dataMap, ([name, value]) => ({ name, value }));
+            }, [filteredExpenses]);
+
+            const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF6363'];
+
+            // --- エラー表示用コンポーネント ---
+            const PermissionErrorDisplay = ({ collectionName }) => {
+                const rules = `rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /artifacts/general-master-data/public/data/{document=**} {\n      allow read: if request.auth != null;\n      allow write: if false;\n    }\n    match /expenses/{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}`;
+                return (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md mb-6" role="alert">
+                        <p className="font-bold">設定が必要です：{collectionName}へのアクセス権限がありません</p>
+                        <p className="mt-2">データベースのセキュリティルールにより、データの読み込みがブロックされています。Firebaseコンソールの「Firestore Database」>「ルール」タブに移動し、以下のルールを貼り付けて「公開」してください。</p>
+                        <pre className="bg-gray-800 text-white p-3 rounded-md mt-4 overflow-x-auto text-sm"><code>{rules}</code></pre>
+                    </div>
+                );
+            };
+
+            // --- ビューの切り替え ---
+            if (!selectedMember) {
+                return (
+                    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+                        <Card className="w-full max-w-md">
+                            <CardHeader><CardTitle>メンバーを選択</CardTitle><CardDescription>経費を精算するメンバーを選択してください。</CardDescription></CardHeader>
+                            <CardContent>
+                                {isLoading ? <p className="text-center text-gray-500">メンバーを読み込み中...</p>
+                                : error === 'permission-denied-members' ? <PermissionErrorDisplay collectionName="従業員データ" />
+                                : error ? <div className="text-center text-red-500 bg-red-50 p-4 rounded-lg"><p className="font-bold">エラー</p><p>{error}</p></div>
+                                : members.length === 0 ? <div className="text-center text-yellow-600 bg-yellow-50 p-4 rounded-lg"><p className="font-bold">メンバーが見つかりません</p><p>Firestoreにデータが登録されているか確認してください。</p></div>
+                                : (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label htmlFor="member-select" className="sr-only">メンバーを選択</label>
+                                            <Select id="member-select" value={selectedMemberId} onChange={(e) => setSelectedMemberId(e.target.value)}>
+                                                <option value="" disabled>-- メンバーを選択 --</option>
+                                                {members.map(member => <option key={member.id} value={member.id}>{member.name}</option>)}
+                                            </Select>
+                                        </div>
+                                        <Button onClick={() => { const member = members.find(m => m.id === selectedMemberId); if (member) handleSelectMember(member); }} disabled={!selectedMemberId} className="w-full bg-blue-600 hover:bg-blue-700">選択して次へ</Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                );
+            }
+
+            return (
+                <React.Fragment>
+                    {notification && <div className="fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg animate-pulse">{notification}</div>}
+                    {isDeleteModalOpen && <Modal title="経費を削除" onConfirm={confirmDelete} onCancel={() => setIsDeleteModalOpen(false)} confirmText="削除" confirmColor="bg-red-500 hover:bg-red-600 text-white"><p>この経費を削除してもよろしいですか？この操作は元に戻せません。</p></Modal>}
+                    {isEditModalOpen && <EditExpenseModal expense={expenseToProcess} onSave={handleUpdateExpense} onClose={() => setIsEditModalOpen(false)} expenseCategories={expenseCategories} />}
+                    
+                    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+                        <header className="bg-white shadow-sm">
+                            <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-900">出張旅費精算</h1>
+                                    <p className="text-sm text-blue-600 font-semibold mt-1">対象メンバー: {selectedMember.name}</p>
+                                </div>
+                                <Button onClick={handleBackToSelection} variant="secondary">メンバー選択に戻る</Button>
+                            </div>
+                        </header>
+                        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                            {error === 'permission-denied-expenses' && <PermissionErrorDisplay collectionName="経費データ" />}
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <div className="lg:col-span-1 space-y-8">
+                                    <Card>
+                                        <CardHeader><CardTitle>経費を追加</CardTitle></CardHeader>
+                                        <CardContent>
+                                            <form onSubmit={handleAddExpense} className="space-y-4">
+                                                <div><label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">日付</label><Input type="date" id="date" name="date" value={newExpense.date} onChange={handleInputChange} required /></div>
+                                                <div><label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">カテゴリ</label><Select id="category" name="category" value={newExpense.category} onChange={handleInputChange} required>{Object.entries(expenseCategories).map(([key, value]) => <option key={key} value={key}>{value}</option>)}</Select></div>
+                                                {newExpense.category === 'allowance' && (<div><label htmlFor="allowance_type" className="block text-sm font-medium text-gray-700 mb-1">日当の種類</label><Select id="allowance_type" name="allowance_type" onChange={handleAllowanceSelect} defaultValue=""><option value="" disabled>選択してください...</option>{allowances.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}</Select></div>)}
+                                                <div><label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">金額 (円)</label><Input type="number" id="amount" name="amount" placeholder="例: 5000" value={newExpense.amount} onChange={handleInputChange} required disabled={newExpense.category === 'allowance'} /></div>
+                                                <div><div className="flex justify-between items-center mb-1"><label htmlFor="description" className="block text-sm font-medium text-gray-700">内容</label><span className="text-xs text-gray-500">{newExpense.description.length}/50</span></div><Input type="text" id="description" name="description" placeholder={newExpense.category === 'allowance' ? '日当の内容を記入してください' : '例: 新幹線 東京-大阪'} value={newExpense.description} onChange={handleInputChange} maxLength="50" /></div>
+                                                <Button type="submit" className="w-full">経費を追加する</Button>
+                                            </form>
+                                        </CardContent>
+                                    </Card>
+                                    
+                                    <Card>
+                                        <CardHeader><CardTitle>データ出力</CardTitle><CardDescription>現在の表示期間の経費を出力します。</CardDescription></CardHeader>
+                                        <CardContent className="space-y-3">
+                                            <Button onClick={handleDownloadCsv} className="w-full bg-teal-600 hover:bg-teal-700">CSVでダウンロード</Button>
+                                            <Button onClick={handleCopyToClipboard} className="w-full bg-indigo-600 hover:bg-indigo-700">クリップボードにコピー</Button>
+                                        </CardContent>
+                                    </Card>
+
+                                     <Card>
+                                        <CardHeader><CardTitle>経費カテゴリ別サマリー</CardTitle><CardDescription>カテゴリ別の合計金額（円グラフ）</CardDescription></CardHeader>
+                                        <CardContent>
+                                            {filteredExpenses.length > 0 ? (
+                                                <div style={{ width: '100%', height: 300 }}>
+                                                    <ResponsiveContainer>
+                                                        <PieChart>
+                                                            <Pie data={chartData} cx="50%" cy="50%" labelLine={false} outerRadius={80} fill="#8884d8" dataKey="value" nameKey="name" label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => { const r = innerRadius + (outerRadius - innerRadius) * 0.5; const x = cx + r * Math.cos(-midAngle * Math.PI / 180); const y = cy + r * Math.sin(-midAngle * Math.PI / 180); return <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">{`${(percent * 100).toFixed(0)}%`}</text>; }}>{chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie>
+                                                            <Tooltip formatter={(value) => `${value.toLocaleString()}円`} />
+                                                            <Legend />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            ) : <p className="text-gray-500">対象期間に経費はありません。</p>}
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                <div className="lg:col-span-2 space-y-8">
+                                    {/* *** NEW: 期間サマリーカード *** */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>期間サマリー</CardTitle>
+                                            <CardDescription>{`${startDate.replace(/-/g, '/')} から ${endDate.replace(/-/g, '/')} まで`}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 gap-4 text-center">
+                                                <div>
+                                                    <p className="text-sm text-gray-500">合計金額</p>
+                                                    <p className="text-3xl font-bold text-gray-900">{totalAmount.toLocaleString()}円</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-500">経費件数</p>
+                                                    <p className="text-3xl font-bold text-gray-900">{filteredExpenses.length}件</p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                
+                                    <Card>
+                                         <CardHeader>
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div>
+                                                    <CardTitle>経費一覧</CardTitle>
+                                                    <CardDescription>登録された経費が表示されます。</CardDescription>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <div className="flex items-center border border-gray-300 rounded-md">
+                                                        <Button onClick={() => setClosingType('endOfMonth')} variant="ghost" className={`rounded-r-none ${closingType === 'endOfMonth' ? 'bg-gray-200' : ''}`}>月末締め</Button>
+                                                        <Button onClick={() => setClosingType('15th')} variant="ghost" className={`rounded-l-none border-l border-gray-300 ${closingType === '15th' ? 'bg-gray-200' : ''}`}>15日締め</Button>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button onClick={() => setCurrentDate(d => new Date(d.setMonth(d.getMonth() - 1)))} variant="ghost">＜ 前月</Button>
+                                                        <span className="text-sm font-medium text-center w-40">{`${startDate.replace(/-/g, '/')} - ${endDate.replace(/-/g, '/')}`}</span>
+                                                        <Button onClick={() => setCurrentDate(d => new Date(d.setMonth(d.getMonth() + 1)))} variant="ghost">次月 ＞</Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {filteredExpenses.length > 0 ? (
+                                                <Table>
+                                                    <TableHeader><TableRow><TableHead>日付</TableHead><TableHead>カテゴリ</TableHead><TableHead>内容</TableHead><TableHead className="text-right">金額</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                                    <TableBody>
+                                                        {filteredExpenses.map((expense) => (
+                                                            <TableRow key={expense.id}>
+                                                                <TableCell>{expense.date}</TableCell>
+                                                                <TableCell>{expenseCategories[expense.category]}</TableCell>
+                                                                <TableCell className="font-medium">{expense.description || '-'}</TableCell>
+                                                                <TableCell className="text-right">{expense.amount.toLocaleString()}円</TableCell>
+                                                                <TableCell className="text-right space-x-2">
+                                                                    <Button onClick={() => handleEditClick(expense)} className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 h-auto">修正</Button>
+                                                                    <Button onClick={() => handleDeleteClick(expense)} variant="destructive" className="text-xs px-2 py-1 h-auto">削除</Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            ) : <p className="text-center text-gray-500 py-8">この期間に登録された経費はありません。</p>}
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </React.Fragment>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+    </script>
+</body>
+</html>
+
