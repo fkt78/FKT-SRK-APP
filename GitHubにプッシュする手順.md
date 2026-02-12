@@ -19,6 +19,26 @@ git push -u origin main
 
 - 初回は GitHub の認証（ユーザー名 + Personal Access Token）を聞かれる場合があります。
 - すでにリポジトリがある場合は、上記の `git commit` で「nothing to commit」と出ることがあります。そのときは `git push origin main` だけ実行すればOKです。
+- **「Updates were rejected because the remote contains work...」と出た場合**（リモートに自分以外のコミットがある場合）は、下の「リモートの変更を取り込んでからプッシュ」を実行してください。
+
+---
+
+## リモートの変更を取り込んでからプッシュ（rejected と出たとき）
+
+プッシュで「Updates were rejected because the remote contains work...」と出た場合は、**先にリモートの変更を取り込んでから**プッシュします。
+
+```bash
+cd "/Users/fukitakatsumi/Desktop/（有）吹田総業/アプリバックアップフォルダ/おまけ/出張日当管理アプリ"
+
+# リモートの main を取り込む（履歴をきれいに保つ場合は --rebase）
+git pull origin main --rebase
+
+# 競合がなければそのままプッシュ
+git push origin main
+```
+
+- 競合（conflict）が出た場合は、表示されたファイルを編集して解消したあと、`git add .` → `git rebase --continue`（または `git commit`）→ `git push origin main` を実行してください。
+- どうしても「ローカルの内容でリモートを上書きしたい」場合のみ、`git push origin main --force` を使います（**リモートの履歴が消えるので注意**）。
 
 ---
 
