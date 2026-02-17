@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "shucchou-ryohi-kanri",
     "public": ".",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
   }
