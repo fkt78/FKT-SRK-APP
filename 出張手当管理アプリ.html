@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1f2937">
     <title>出張旅費精算アプリ</title>
+    <link rel="manifest" href="manifest.json">
     
     <!-- スタイルと外部ライブラリの読み込み -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -600,6 +602,16 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
 
+    </script>
+    <!-- PWA: Service Worker 登録（常に最新を取得） -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js', { scope: './' })
+            .then(function (reg) { reg.update(); })
+            .catch(function () {});
+        });
+      }
     </script>
 </body>
 </html>

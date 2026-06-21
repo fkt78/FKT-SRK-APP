@@ -2,7 +2,7 @@
   "name": "出張旅費精算アプリ",
   "short_name": "出張精算",
   "description": "出張日当・経費を管理するアプリ",
-  "start_url": "./出張アプリ保存ファイル名変更.html",
+  "start_url": "./出張手当管理アプリ.html",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#1f2937",
