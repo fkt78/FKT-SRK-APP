@@ -2,6 +2,13 @@
   "hosting": {
     "site": "shucchou-ryohi-seisan",
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "redirects": [
+      {
+        "source": "/出張手当管理アプリ.html",
+        "destination": "/",
+        "type": 301
+      }
+    ]
   }
 }

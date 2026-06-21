@@ -2,7 +2,7 @@
  * Service Worker: 出張旅費精算アプリ PWA
  * 常に最新を優先（Network First）→ オフライン時のみキャッシュを使用
  */
-const CACHE_NAME = 'fkt-srk-app-v1';
+const CACHE_NAME = 'fkt-srk-app-v2';
 
 // 常にネットワークを優先し、失敗時のみキャッシュを使う（常に最新で開く）
 async function networkFirst(request) {
