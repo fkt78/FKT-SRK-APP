@@ -14,6 +14,12 @@
     <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
     <!-- Rechartsの依存関係を追加 -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- JSXを従来方式(React.createElement)で変換させ、react/jsx-runtimeのimport出力による実行時エラーを防ぐ -->
+    <script>
+        Babel.registerPreset('react-classic', {
+            presets: [[Babel.availablePresets.react, { runtime: 'classic' }]]
+        });
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.3/Recharts.min.js"></script>
     
     <!-- ▼ Firebaseライブラリ (v9 Compat) ▼ -->
@@ -38,7 +44,7 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="react-classic">
         // Rechartsコンポーネントの分割代入
         const { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } = Recharts;
 
