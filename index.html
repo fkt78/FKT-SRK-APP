@@ -45,6 +45,19 @@
     <div id="root"></div>
 
     <script type="text/babel" data-presets="react-classic">
+        // --- バージョン情報 ---
+        // ▼ この2行は デプロイ.sh が自動で書き換えます。手で編集しないでください ▼
+        const APP_VERSION = '1.0.0';
+        const DEPLOYED_AT = '2026/08/01 23:12';
+        // ▲ ここまで ▲
+
+        // バージョンと最終デプロイ日時の表示
+        const VersionBadge = ({ className = '' }) => (
+            <p className={`text-xs text-gray-400 ${className}`}>
+                v{APP_VERSION}　最終デプロイ: {DEPLOYED_AT}
+            </p>
+        );
+
         // Rechartsコンポーネントの分割代入
         const { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } = Recharts;
 
@@ -493,6 +506,7 @@
                                 )}
                             </CardContent>
                         </Card>
+                        <VersionBadge className="mt-4 text-center" />
                     </div>
                 );
             }
@@ -509,6 +523,7 @@
                                 <div>
                                     <h1 className="text-3xl font-bold text-gray-900">出張旅費精算</h1>
                                     <p className="text-sm text-blue-600 font-semibold mt-1">対象メンバー: {selectedMember.name}</p>
+                                    <VersionBadge className="mt-1" />
                                 </div>
                                 <Button onClick={handleBackToSelection} variant="secondary">メンバー選択に戻る</Button>
                             </div>
