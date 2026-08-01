@@ -9,10 +9,12 @@
     
     <!-- スタイルと外部ライブラリの読み込み -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- 本番ビルドを使用。開発ビルド(development.js)は約1.1MBあり、読み込みが遅くなる -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- prop-types は Recharts の UMD が t.PropTypes として参照する。外すとグラフが動かない -->
     <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-    <!-- Rechartsの依存関係を追加 -->
+    <!-- Rechartsの依存関係 -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- JSXを従来方式(React.createElement)で変換させ、react/jsx-runtimeのimport出力による実行時エラーを防ぐ -->
     <script>
@@ -47,8 +49,8 @@
     <script type="text/babel" data-presets="react-classic">
         // --- バージョン情報 ---
         // ▼ この2行は デプロイ.sh が自動で書き換えます。手で編集しないでください ▼
-        const APP_VERSION = '1.0.1';
-        const DEPLOYED_AT = '2026/08/01 23:22';
+        const APP_VERSION = '1.1.0';
+        const DEPLOYED_AT = '2026/08/02 00:11';
         // ▲ ここまで ▲
 
         // バージョンと最終デプロイ日時の表示

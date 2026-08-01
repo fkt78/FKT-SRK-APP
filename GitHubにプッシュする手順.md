@@ -1,117 +1,104 @@
-# FKT-SRK-APP を GitHub に保存する手順
+# GitHub への保存について
 
-このフォルダ（出張日当管理アプリ）の内容を  
-**https://github.com/fkt78/FKT-SRK-APP** に保存する手順です。
+このフォルダは **https://github.com/fkt78/FKT-SRK-APP** に接続済みです。
+設定は済んでいるので、初期化やリモート登録をやり直す必要はありません。
 
----
-
-## クイック実行（コピペ用）
-
-**ターミナル.app** を開き、以下を **まとめてコピーして貼り付けて Enter** してください。
-
-```bash
-cd "/Users/fukitakatsumi/Desktop/（有）吹田総業/アプリバックアップフォルダ/おまけ/出張日当管理アプリ" && \
-rm -rf .git 2>/dev/null; git init && git branch -M main && \
-git add . && git commit -m "出張日当管理アプリ（出張旅費精算・PWA）を追加・更新" && \
-git remote remove origin 2>/dev/null; git remote add origin https://github.com/fkt78/FKT-SRK-APP.git && \
-git push -u origin main
+```
+フォルダ  : ~/（有）吹田総業/CONV-APP/CONV-SYUTTYOU-APP
+リポジトリ: https://github.com/fkt78/FKT-SRK-APP
+ブランチ  : main
 ```
 
-- 初回は GitHub の認証（ユーザー名 + Personal Access Token）を聞かれる場合があります。
-- すでにリポジトリがある場合は、上記の `git commit` で「nothing to commit」と出ることがあります。そのときは `git push origin main` だけ実行すればOKです。
-- **「Updates were rejected because the remote contains work...」と出た場合**（リモートに自分以外のコミットがある場合）は、下の「リモートの変更を取り込んでからプッシュ」を実行してください。
-
 ---
 
-## リモートの変更を取り込んでからプッシュ（rejected と出たとき）
+## 通常はこれだけ
 
-プッシュで「Updates were rejected because the remote contains work...」と出た場合は、**先にリモートの変更を取り込んでから**プッシュします。
+`デプロイ.sh` が **GitHub へのプッシュまで自動で行います。** 別途プッシュする必要はありません。
 
 ```bash
-cd "/Users/fukitakatsumi/Desktop/（有）吹田総業/アプリバックアップフォルダ/おまけ/出張日当管理アプリ"
-
-# リモートの main を取り込む（履歴をきれいに保つ場合は --rebase）
-git pull origin main --rebase
-
-# 競合がなければそのままプッシュ
-git push origin main
+cd ~/（有）吹田総業/CONV-APP/CONV-SYUTTYOU-APP && ./デプロイ.sh
 ```
 
-- 競合（conflict）が出た場合は、表示されたファイルを編集して解消したあと、`git add .` → `git rebase --continue`（または `git commit`）→ `git push origin main` を実行してください。
-- どうしても「ローカルの内容でリモートを上書きしたい」場合のみ、`git push origin main --force` を使います（**リモートの履歴が消えるので注意**）。
+詳しくは [デプロイ手順.md](デプロイ手順.md) を参照してください。
+
+> **`githubにプッシュ.sh` は使わないでください。**
+> プッシュだけを行うとバージョン番号とデプロイ日時が更新されず、
+> 公開中のアプリとリポジトリの内容が食い違います。
 
 ---
 
-## 方法A: このフォルダをそのままリポジトリにしてプッシュする
+## 公開せずに GitHub にだけ保存したいとき
 
-**ターミナル（Terminal.app など）** を開き、次のコマンドを **順番に** 実行してください。
+書きかけの状態を退避しておきたい場合など、デプロイせず記録だけ残したいときに使います。
 
 ```bash
-# 1. このフォルダに移動
-cd "/Users/fukitakatsumi/Desktop/（有）吹田総業/アプリバックアップフォルダ/おまけ/出張日当管理アプリ"
-
-# 2. まだ git リポジトリでない場合は初期化（既に .git がある場合はスキップして 3 へ）
-git init
-
-# 3. ブランチ名を main にする（必要な場合）
-git branch -M main
-
-# 4. 全ファイルを追加
-git add .
-
-# 5. 初回コミット
-git commit -m "出張日当管理アプリ（出張旅費精算）を追加"
-
-# 6. リモートを追加（まだの場合）
-git remote add origin https://github.com/fkt78/FKT-SRK-APP.git
-
-# すでに別のリモートが入っている場合は、先に削除してから追加
-# git remote remove origin
-# git remote add origin https://github.com/fkt78/FKT-SRK-APP.git
-
-# 7. GitHub にプッシュ（初回は -u 付き）
-git push -u origin main
+cd ~/（有）吹田総業/CONV-APP/CONV-SYUTTYOU-APP
+git add -A
+git commit -m "作業中: 内容をここに書く"
+git push
 ```
 
-- GitHub にログインしていない場合は、プッシュ時に **ユーザー名** と **パスワード（または Personal Access Token）** の入力が求められます。
-- パスワードは **Personal Access Token** を使う必要があります（通常のパスワードは使えません）。  
-  GitHub → Settings → Developer settings → Personal access tokens で発行できます。
+この場合バージョンは上がりません。公開に反映するときに `./デプロイ.sh` を実行してください。
 
 ---
 
-## 方法B: 既存の FKT-SRK-APP リポジトリに「中身だけ」合わせる
-
-GitHub にすでに FKT-SRK-APP リポジトリがあり、**その中身をこのフォルダの内容で上書きしたい**場合は、次のようにします。
+## 状態を確認したいとき
 
 ```bash
-# 1. ホームなど、作業用の場所に移動
-cd /Users/fukitakatsumi
+cd ~/（有）吹田総業/CONV-APP/CONV-SYUTTYOU-APP && git status -sb
+```
 
-# 2. リポジトリをクローン
-git clone https://github.com/fkt78/FKT-SRK-APP.git
-cd FKT-SRK-APP
+- `## main...origin/main` だけ表示 … GitHub と一致しています
+- `ahead 1` などが付く … ローカルに未プッシュのコミットがあります。`git push` で反映
+- ファイル名が並ぶ … 保存していない変更があります
 
-# 3. 出張日当管理アプリのファイルをすべてコピー（上書き）
-cp -f "/Users/fukitakatsumi/Desktop/（有）吹田総業/アプリバックアップフォルダ/おまけ/出張日当管理アプリ/"* .
-cp -f "/Users/fukitakatsumi/Desktop/（有）吹田総業/アプリバックアップフォルダ/おまけ/出張日当管理アプリ/.gitignore" . 2>/dev/null || true
+直近の履歴を見るには次を実行します。
 
-# 4. 追加・コミット・プッシュ
-git add .
-git status
-git commit -m "出張日当管理アプリの最新版で更新"
-git push origin main
+```bash
+cd ~/（有）吹田総業/CONV-APP/CONV-SYUTTYOU-APP && git log --oneline -10
 ```
 
 ---
 
 ## うまくいかないとき
 
-- **「Permission denied」など書き込みエラー**  
-  → ターミナルを **「ターミナル.app」など、Cursor の外で開いたもの** で実行してください。
+### 「Support for password authentication was removed」
 
-- **「remote: Permission to fkt78/FKT-SRK-APP denied」**  
-  → GitHub にログインしているアカウントに、fkt78/FKT-SRK-APP の書き込み権限があるか確認してください。自分用リポジトリなら、ログインアカウントが fkt78 か確認してください。
+パスワードではなく **Personal Access Token** が必要です。
+GitHub → Settings → Developer settings → Personal access tokens でトークンを作成し、
+パスワードの入力欄にそのトークンを貼り付けてください。
 
-- **「Support for password authentication was removed」**  
-  → パスワードの代わりに **Personal Access Token** を使う必要があります。  
-  GitHub → Settings → Developer settings → Personal access tokens でトークンを作成し、パスワードの入力欄にそのトークンを貼り付けてください。
+### 「remote: Permission to fkt78/FKT-SRK-APP denied」
+
+ログインしているアカウントに書き込み権限があるか確認してください。
+自分用のリポジトリなら、アカウントが `fkt78` になっているか確認します。
+
+### 「Updates were rejected because the remote contains work...」
+
+GitHub 側に、手元にないコミットがある状態です。先に取り込んでからプッシュします。
+
+```bash
+cd ~/（有）吹田総業/CONV-APP/CONV-SYUTTYOU-APP
+git pull origin main --rebase
+git push origin main
+```
+
+競合が出た場合は、表示されたファイルを直してから
+`git add .` → `git rebase --continue` → `git push origin main` の順に実行します。
+
+### 「Permission denied」など書き込みエラー
+
+**ターミナル.app** など、エディタの外で開いたターミナルで実行してください。
+
+---
+
+## やってはいけないこと
+
+以前このファイルに載っていた手順のうち、次の2つは**実行しないでください。**
+
+- **`rm -rf .git` してから `git init` し直す**
+  … これまでの履歴がすべて消えます。このフォルダは既に正しく設定済みなので、
+  やり直す理由はありません。
+
+- **`git push --force`**
+  … GitHub 側の履歴を上書きして消します。前項の rebase で解決できます。
