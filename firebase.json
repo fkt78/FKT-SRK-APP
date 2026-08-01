@@ -18,6 +18,20 @@
         "destination": "/",
         "type": 301
       }
+    ],
+    "headers": [
+      {
+        "source": "/",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "**/*.@(html|js|json)",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "**/*.@(svg|png|ico)",
+        "headers": [{ "key": "Cache-Control", "value": "max-age=86400" }]
+      }
     ]
   }
 }
