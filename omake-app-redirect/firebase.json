@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "site": "omake-app",
+    "public": "public",
+    "ignore": [],
+    "redirects": [
+      {
+        "source": "**",
+        "destination": "https://shucchou-ryohi-seisan.web.app/",
+        "type": 301
+      }
+    ]
+  }
+}

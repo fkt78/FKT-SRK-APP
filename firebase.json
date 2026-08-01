@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "omake-app",
+    "site": "shucchou-ryohi-seisan",
     "public": ".",
     "ignore": [
       "firebase.json",
@@ -9,7 +9,8 @@
       ".git/**",
       "**/.git/**",
       "**/*.md",
-      "**/*.sh"
+      "**/*.sh",
+      "omake-app-redirect/**"
     ],
     "redirects": [
       {
