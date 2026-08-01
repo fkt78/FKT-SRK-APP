@@ -226,7 +226,13 @@
             
             // *** NEW: 締め日と期間管理のためのState ***
             const [closingType, setClosingType] = React.useState('endOfMonth'); // 'endOfMonth' or '15th'
-            const [currentDate, setCurrentDate] = React.useState(new Date());
+            // 表示中の月。日は常に1日に固定する（31日のまま月を増減すると翌月へ繰り上がり、月が飛ぶため）
+            const [currentDate, setCurrentDate] = React.useState(() => {
+                const today = new Date();
+                return new Date(today.getFullYear(), today.getMonth(), 1);
+            });
+            // 月の増減。new Date(年, 月±1, 1) は年またぎも自動で処理される
+            const shiftMonth = (diff) => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + diff, 1));
 
             // --- Firebaseの初期化 ---
             React.useEffect(() => {
@@ -343,12 +349,11 @@
 
                 if (closingType === '15th') {
                     // Start date is the 16th of the previous month
-                    const start = new Date(year, month, 16);
-                    start.setMonth(start.getMonth() - 1);
-                    
+                    const start = new Date(year, month - 1, 16);
+
                     // End date is the 15th of the current month
                     const end = new Date(year, month, 15);
-                    
+
                     return { startDate: formatDate(start), endDate: formatDate(end) };
                 } else { // endOfMonth
                     // Start date is the 1st of the current month
@@ -568,9 +573,9 @@
                                                         <Button onClick={() => setClosingType('15th')} variant="ghost" className={`rounded-l-none border-l border-gray-300 ${closingType === '15th' ? 'bg-gray-200' : ''}`}>15日締め</Button>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Button onClick={() => setCurrentDate(d => new Date(d.setMonth(d.getMonth() - 1)))} variant="ghost">＜ 前月</Button>
+                                                        <Button onClick={() => shiftMonth(-1)} variant="ghost">＜ 前月</Button>
                                                         <span className="text-sm font-medium text-center w-40">{`${startDate.replace(/-/g, '/')} - ${endDate.replace(/-/g, '/')}`}</span>
-                                                        <Button onClick={() => setCurrentDate(d => new Date(d.setMonth(d.getMonth() + 1)))} variant="ghost">次月 ＞</Button>
+                                                        <Button onClick={() => shiftMonth(1)} variant="ghost">次月 ＞</Button>
                                                     </div>
                                                 </div>
                                             </div>
