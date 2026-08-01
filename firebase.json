@@ -2,7 +2,15 @@
   "hosting": {
     "site": "omake-app",
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      ".git/**",
+      "**/.git/**",
+      "**/*.md",
+      "**/*.sh"
+    ],
     "redirects": [
       {
         "source": "/出張手当管理アプリ.html",
